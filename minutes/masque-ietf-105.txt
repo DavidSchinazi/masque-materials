@@ -1,0 +1,146 @@
+==============
+IETF 105, Montreal, Van Horne Room, Thursday 2019-07-25, 08:30 AM
+David Schinazi and Mirja Kuehlewind chairing
+45 people in attendance
+Tommy Pauly note taking
+==============
+
+Mirja Kuehlewind: Use cases and requirements
+https://github.com/DavidSchinazi/masque-materials/blob/master/slides/2019-07/kuhlewind-masque-ietf-105.pdf
+
+David Schinazi: MASQUE overview; split document to have main approach and
+authentication separately
+https://github.com/DavidSchinazi/masque-materials/blob/master/slides/2019-07/dschinazi-masque-ietf-105.pdf
+
+Question: Do people want to implement, etc?
+
+Nick Sullivan: Lots of interesting stuff around proxying and VPNs. We have a
+DNS over TOR service that could use this. We use a lot of proxies over TCP and
+forward on the original IP. This is a use case for that. Regarding the TLS
+layer and QUIC HTTP layer—token binding uses exporters, but we also have
+secondary certs in HTTP. A bit nicer abstraction that's harder to get wrong.
+Look at exported authenticators draft.
+
+David: The reason I'm not using those now is that these require H3 servers
+including a signal showing that they support these frames. Once everyone does
+it, then it won't be a flag to identify the use of masque. But agree though.
+
+Nick: Are you using the exporter to derive the key?
+
+David: Used as a nonce, not a key.
+
+Nick: Could make sense in psk code, etc.
+
+Patrick McManus: Happy to work on HTTP compatibility issues. The settings frame
+is sometimes true, sometimes not true.
+
+Ben Schwartz: Happy we're talking about this. Glad we separated out auth
+mechanism. I want it to be easy for users to configure one of these things. If
+they need to generate a key pair locally, and transfer the key to an auth
+service to register, it's too many steps for many applications. Should be
+compatible to be not a regression for usability. The current state is that we
+use high entropy URLs. We may want to standardize the URL format to make this
+easier to streamline.
+
+David: For the VPN scenario, ideal use case is open-source clients and servers;
+easy within a given implementation.
+
+Ben: TOR was mentioned a few times. Note that it's a TCP proxy with fewer nested
+transport issues. So that may be more performant than this.
+
+David: With QUIC datagram, we can avoid the nested transport issues.
+
+Ben: Also, there's a thought that BBR type congestion controls will work better
+on these deployments.
+
+Gorry Fairhurst: We have to be careful about what congestion control over the
+top. BBRv1 alone would be pretty bad. Maybe BBRv2 could be the best. How does
+the outer part work? Can it add services, or is it always just a dumb tunnel?
+
+Mirja: I don't think that's out of scope at all. I think it's interesting to
+have datagram on the outer tunnel; but also could have outer quic on multiple
+links, and only have those do CC, and deactivate CC on the inner link as long as
+there is always an outer QUIC.
+
+Gorry: It can be super cool to do recovery without knowing what you're
+recovering on the tunnel. 
+
+David: To the point of scope, that's what we're figuring out in this meeting.
+There are cases in which we don't want to give the proxy too much information,
+but when we do trust it, we can certainly do deeper coordination.
+
+Mirja: Also, since CC and flow control are separated nicely in QUIC, we have a
+good opportunity.
+
+Ben: On a single flow between client and proxy, each packet can either be a QUIC
+DATAGRAM frame, or else a stream, and let the client select how much reliability
+help they get from the outer link.
+
+Mirja: Yes, you make a choice depending on the traffic.
+
+David: If people are interested in doing interop, please let us know.
+
+Marcus Ihlar: We're already working on some of this, and may be able to interop
+by Singapore. More looking at local recovery, but definitely interested.
+
+Emile Stephan: Will it be at the same table as QUIC at a hackathon?
+
+David: Don't know yet! Haven't thought that far ahead.
+
+Marten Seeman: I have another use case that's not tunneling. We have a problem
+of traffic being filtered by firewalls. Looking like H3 traffic will help by
+using connect method.
+
+Emile: A proxy to translate between QUIC and h1?
+
+Nicholas Kunis: We are trying to not lose packets through satellite links. Will
+present in PANRG too. Interaction with end to end CC is more than a research
+issue here.
+
+Ben: What are your thoughts on MTU.
+
+David: MTU is great ;) The document has a short paragraph on MTU discovery, it's
+a reasonable concern.
+
+Gorry: Was asking about how many QUIC implementation have done Path MTU... if we
+get it right even simply in QUIC, it could be really useful here. Don't want to
+do Path MTU within path MTU.
+
+Tommy: What are the dependencies?
+
+David: Hard dependencies are: QUIC/H3, QUIC Datagrams, Authenticated masque can
+depend on exported authenticators. Enhancements: PMTUD
+
+Tracking a list of these would be useful
+
+Lucas Pardue: I agree with this list of dependencies. Figuring out a
+required/desirable list. For the required ones, do we have a feeling of how much
+churn will turn people away? How locked down is datagram?
+
+David: As someone who just changed their quic implementation, I totally get it.
+QUIC moves a lot, but the interaction between QUIC and masque will probably be a
+pretty thin layer, and won't change with the same cadence. If its over HTTP
+semantics, it's not changing with H3. May also have connection ID requirements.
+
+Main change in datagram was to remove flow ID, and will be putting the flows at
+an app layer. That makes datagram so simple that it likely won't change much.
+
+Gorry: Generic question: we have inner loops, outer loops... how do we feed back
+issues across the entire path? Add that to the list of things to look at.
+
+Ben: How do you see the relationship with web transport and H2 fallback?
+
+David: That's about getting better APIs for the web. One consideration was
+building masque on top of web transport. I've thought about that, and I
+currently see it not using the javascript layer; they may not build on top of
+one another.
+
+Ben: I disagree with the javascript comment.
+
+David: My worry about running an entire browser in the browser is that the inner
+web browser wants to end-to-end encryption, and trust validation; from
+javascript, we don't have a good way to access the root cert store.
+
+Ben: Yes, the context you're running in would be trusted for this purpose.
+
+Martin Thomson: I don't see an issue if you know what you're doing there.
