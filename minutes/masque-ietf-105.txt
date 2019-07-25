@@ -93,9 +93,9 @@ using connect method.
 
 Emile: A proxy to translate between QUIC and h1?
 
-Nicholas Kunis: We are trying to not lose packets through satellite links. Will
-present in PANRG too. Interaction with end to end CC is more than a research
-issue here.
+Nicolas Kuhn: We are trying to not lose packets between the satellite terminal
+and the end terminal. Will present in PANRG too. Interaction with end to end CC
+is more than a research issue here.
 
 Ben: What are your thoughts on MTU.
 
